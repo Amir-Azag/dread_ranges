@@ -76,7 +76,12 @@ fetch_google() {
 fetch_aws() {
     check_dns ip-ranges.amazonaws.com || { log_error "AWS DNS faal"; return; }
     log_info "Ophalen AWS IP ranges..."
-    fetch_json_ips "https://ip-ranges.amazonaws.com/ip-ranges.json" dread_aws.txt "AWS IP ranges"
+    curl -s --fail --max-time 10 "https://ip-ranges.amazonaws.com/ip-ranges.json" -o "$TMP_DIR/aws.json" || return
+    if ! jq -e . "$TMP_DIR/aws.json" >/dev/null 2>&1; then
+        log_error "Ongeldige JSON AWS"
+        return
+    fi
+    jq -r '.prefixes[].ip_prefix' "$TMP_DIR/aws.json" | grep -v ':' | sort -Vu > dread_aws.txt
 }
 
 fetch_scaleway() {
